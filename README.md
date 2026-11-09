@@ -19,8 +19,9 @@ extraerse sin cambiar la estructura actual de Flutter.
 Requisitos: Docker y [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started).
 
 ```powershell
-supabase start
-supabase db reset
+npm install
+npm run backend:start
+npm run backend:reset
 ```
 
 La migración inicial crea perfiles, vehículos, solicitudes, historial de
@@ -36,9 +37,9 @@ administrador.
 3. Aplicar la migración:
 
 ```powershell
-supabase login
-supabase link --project-ref TU_PROJECT_REF
-supabase db push
+npx supabase login
+npx supabase link --project-ref TU_PROJECT_REF
+npx supabase db push
 ```
 
 4. En Realtime Settings, desactivar **Allow public access** para exigir las

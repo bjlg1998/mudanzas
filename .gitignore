@@ -43,6 +43,7 @@ migrate_working_dir/
 .env.*
 !.env.example
 /supabase/.temp/
+/node_modules/
 
 # Symbolication related
 app.*.symbols
