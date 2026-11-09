@@ -44,8 +44,18 @@ class MudanzasApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const LoginPage(),
+      home: _initialPage(),
     );
+  }
+
+  Widget _initialPage() {
+    if (Backend.isConfigured) {
+      final user = AuthService().currentSession?.user;
+      if (user != null) {
+        return InicioPage(email: user.email ?? 'Usuario');
+      }
+    }
+    return const LoginPage();
   }
 }
 
@@ -58,20 +68,25 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _hidePassword = true;
+  bool _isRegistering = false;
   bool _isLoading = false;
   String? _loginError;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _login() async {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     FocusScope.of(context).unfocus();
@@ -82,15 +97,37 @@ class _LoginPageState extends State<LoginPage> {
 
     if (Backend.isConfigured) {
       try {
-        await AuthService().signIn(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
+        if (_isRegistering) {
+          final response = await AuthService().signUp(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            fullName: _nameController.text.trim(),
+          );
+          if (response.session == null) {
+            if (!mounted) return;
+            setState(() {
+              _isLoading = false;
+              _isRegistering = false;
+              _passwordController.clear();
+              _confirmPasswordController.clear();
+              _loginError =
+                  'Cuenta creada. Revisa tu correo para confirmarla e inicia sesión.';
+            });
+            return;
+          }
+        } else {
+          await AuthService().signIn(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
+        }
       } catch (_) {
         if (!mounted) return;
         setState(() {
           _isLoading = false;
-          _loginError = 'No pudimos iniciar sesión. Revisa tus datos.';
+          _loginError = _isRegistering
+              ? 'No pudimos crear la cuenta. Revisa los datos o usa otro correo.'
+              : 'No pudimos iniciar sesión. Revisa tus datos.';
         });
         return;
       }
@@ -121,7 +158,7 @@ class _LoginPageState extends State<LoginPage> {
                     const _AppLogo(),
                     const SizedBox(height: 32),
                     Text(
-                      'Bienvenido',
+                      _isRegistering ? 'Crea tu cuenta' : 'Bienvenido',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(
@@ -131,13 +168,36 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Ingresa tus datos para continuar',
+                      _isRegistering
+                          ? 'Regístrate para solicitar tu mudanza'
+                          : 'Ingresa tus datos para continuar',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: const Color(0xFF687189),
                       ),
                     ),
                     const SizedBox(height: 32),
+                    if (_isRegistering) ...[
+                      TextFormField(
+                        key: const Key('nameField'),
+                        controller: _nameController,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.name],
+                        decoration: const InputDecoration(
+                          labelText: 'Nombre completo',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
+                        validator: (value) {
+                          if (!_isRegistering) return null;
+                          if ((value?.trim().length ?? 0) < 3) {
+                            return 'Ingresa tu nombre completo';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     TextFormField(
                       key: const Key('emailField'),
                       controller: _emailController,
@@ -165,9 +225,13 @@ class _LoginPageState extends State<LoginPage> {
                       key: const Key('passwordField'),
                       controller: _passwordController,
                       obscureText: _hidePassword,
-                      textInputAction: TextInputAction.done,
+                      textInputAction: _isRegistering
+                          ? TextInputAction.next
+                          : TextInputAction.done,
                       autofillHints: const [AutofillHints.password],
-                      onFieldSubmitted: (_) => _login(),
+                      onFieldSubmitted: (_) {
+                        if (!_isRegistering) _submit();
+                      },
                       decoration: InputDecoration(
                         labelText: 'Contraseña',
                         prefixIcon: const Icon(Icons.lock_outline),
@@ -195,10 +259,31 @@ class _LoginPageState extends State<LoginPage> {
                         return null;
                       },
                     ),
+                    if (_isRegistering) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        key: const Key('confirmPasswordField'),
+                        controller: _confirmPasswordController,
+                        obscureText: _hidePassword,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submit(),
+                        decoration: const InputDecoration(
+                          labelText: 'Confirmar contraseña',
+                          prefixIcon: Icon(Icons.lock_reset_outlined),
+                        ),
+                        validator: (value) {
+                          if (!_isRegistering) return null;
+                          if (value != _passwordController.text) {
+                            return 'Las contraseñas no coinciden';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     FilledButton(
                       key: const Key('loginButton'),
-                      onPressed: _isLoading ? null : _login,
+                      onPressed: _isLoading ? null : _submit,
                       style: FilledButton.styleFrom(
                         minimumSize: const Size.fromHeight(54),
                         shape: RoundedRectangleBorder(
@@ -206,7 +291,13 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       child: Text(
-                        _isLoading ? 'Ingresando...' : 'Iniciar sesión',
+                        _isLoading
+                            ? (_isRegistering
+                                  ? 'Creando cuenta...'
+                                  : 'Ingresando...')
+                            : (_isRegistering
+                                  ? 'Crear cuenta'
+                                  : 'Iniciar sesión'),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -223,7 +314,25 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
+                    TextButton(
+                      key: const Key('toggleRegisterButton'),
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                              setState(() {
+                                _isRegistering = !_isRegistering;
+                                _loginError = null;
+                                _formKey.currentState?.reset();
+                              });
+                            },
+                      child: Text(
+                        _isRegistering
+                            ? 'Ya tengo una cuenta'
+                            : 'Crear una cuenta',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     Text(
                       Backend.isConfigured
                           ? 'Acceso protegido con Supabase.'

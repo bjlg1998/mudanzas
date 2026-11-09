@@ -39,6 +39,18 @@ void main() {
     expect(find.text('Iniciar sesión'), findsOneWidget);
   });
 
+  testWidgets('muestra el formulario para crear una cuenta', (tester) async {
+    await tester.pumpWidget(const MudanzasApp());
+
+    await tester.tap(find.byKey(const Key('toggleRegisterButton')));
+    await tester.pump();
+
+    expect(find.text('Crea tu cuenta'), findsOneWidget);
+    expect(find.byKey(const Key('nameField')), findsOneWidget);
+    expect(find.byKey(const Key('confirmPasswordField')), findsOneWidget);
+    expect(find.text('Crear cuenta'), findsOneWidget);
+  });
+
   testWidgets('crea una solicitud de mudanza con direcciones y vehículo', (
     tester,
   ) async {
