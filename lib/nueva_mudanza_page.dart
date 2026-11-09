@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'core/backend.dart';
 import 'location_picker_page.dart';
+import 'services/move_service.dart';
 
 enum VehicleType {
   motocarro(
@@ -42,6 +44,7 @@ class _NuevaMudanzaPageState extends State<NuevaMudanzaPage> {
   PickedLocation? _destination;
   VehicleType? _vehicle;
   bool _vehicleError = false;
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -74,10 +77,48 @@ class _NuevaMudanzaPageState extends State<NuevaMudanzaPage> {
     });
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final validForm = _formKey.currentState!.validate();
     setState(() => _vehicleError = _vehicle == null);
     if (!validForm || _vehicle == null) return;
+
+    if (Backend.isConfigured && (_origin == null || _destination == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Confirma inicio y destino en el mapa.')),
+      );
+      return;
+    }
+
+    if (Backend.isConfigured) {
+      setState(() => _submitting = true);
+      try {
+        await MoveService().create(
+          MoveDraft(
+            vehicleType: switch (_vehicle!) {
+              VehicleType.motocarro => 'motocarro',
+              VehicleType.camionetaEstacas => 'camioneta_estacas',
+              VehicleType.turbo => 'turbo',
+            },
+            originAddress: _originController.text.trim(),
+            originLatitude: _origin!.latitude,
+            originLongitude: _origin!.longitude,
+            destinationAddress: _destinationController.text.trim(),
+            destinationLatitude: _destination!.latitude,
+            destinationLongitude: _destination!.longitude,
+          ),
+        );
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No pudimos crear la solicitud.')),
+        );
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _submitting = false);
 
     showDialog<void>(
       context: context,
@@ -187,15 +228,17 @@ class _NuevaMudanzaPageState extends State<NuevaMudanzaPage> {
                   const SizedBox(height: 20),
                   FilledButton.icon(
                     key: const Key('continueMoveButton'),
-                    onPressed: _submit,
+                    onPressed: _submitting ? null : _submit,
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(54),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    icon: const Icon(Icons.arrow_forward),
-                    label: const Text('Continuar'),
+                    icon: Icon(
+                      _submitting ? Icons.hourglass_top : Icons.arrow_forward,
+                    ),
+                    label: Text(_submitting ? 'Enviando...' : 'Continuar'),
                   ),
                 ],
               ),

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'core/backend.dart';
 import 'nueva_mudanza_page.dart';
+import 'services/auth_service.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Backend.initialize();
   runApp(const MudanzasApp());
 }
 
@@ -57,6 +61,8 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _hidePassword = true;
+  bool _isLoading = false;
+  String? _loginError;
 
   @override
   void dispose() {
@@ -65,10 +71,32 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _login() {
+  Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     FocusScope.of(context).unfocus();
+    setState(() {
+      _isLoading = true;
+      _loginError = null;
+    });
+
+    if (Backend.isConfigured) {
+      try {
+        await AuthService().signIn(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _loginError = 'No pudimos iniciar sesión. Revisa tus datos.';
+        });
+        return;
+      }
+    }
+
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(
         builder: (_) => InicioPage(email: _emailController.text.trim()),
@@ -170,26 +198,38 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 24),
                     FilledButton(
                       key: const Key('loginButton'),
-                      onPressed: _login,
+                      onPressed: _isLoading ? null : _login,
                       style: FilledButton.styleFrom(
                         minimumSize: const Size.fromHeight(54),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Text(
-                        'Iniciar sesión',
-                        style: TextStyle(
+                      child: Text(
+                        _isLoading ? 'Ingresando...' : 'Iniciar sesión',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
+                    if (_loginError != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        _loginError!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
-                    const Text(
-                      'Demo: utiliza cualquier correo válido y una contraseña de 6 caracteres.',
+                    Text(
+                      Backend.isConfigured
+                          ? 'Acceso protegido con Supabase.'
+                          : 'Modo demo: configura Supabase para activar usuarios reales.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Color(0xFF7A8398)),
+                      style: const TextStyle(color: Color(0xFF7A8398)),
                     ),
                   ],
                 ),
@@ -248,7 +288,9 @@ class InicioPage extends StatelessWidget {
 
   final String email;
 
-  void _logout(BuildContext context) {
+  Future<void> _logout(BuildContext context) async {
+    if (Backend.isConfigured) await AuthService().signOut();
+    if (!context.mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => const LoginPage()),
     );

@@ -1,0 +1,1 @@
+-- Datos locales opcionales. Los usuarios se crean desde Supabase Auth.
