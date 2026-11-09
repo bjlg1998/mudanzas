@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/backend.dart';
 import 'nueva_mudanza_page.dart';
@@ -75,7 +78,23 @@ class _LoginPageState extends State<LoginPage> {
   bool _hidePassword = true;
   bool _isRegistering = false;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
+  bool _navigating = false;
   String? _loginError;
+  StreamSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Backend.isConfigured) {
+      _authSubscription = Backend.client.auth.onAuthStateChange.listen((data) {
+        final session = data.session;
+        if (session != null && data.event == AuthChangeEvent.signedIn) {
+          _openHome(session.user.email ?? 'Usuario');
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -83,7 +102,16 @@ class _LoginPageState extends State<LoginPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _authSubscription?.cancel();
     super.dispose();
+  }
+
+  void _openHome(String email) {
+    if (!mounted || _navigating) return;
+    _navigating = true;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(builder: (_) => InicioPage(email: email)),
+    );
   }
 
   Future<void> _submit() async {
@@ -134,11 +162,25 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => InicioPage(email: _emailController.text.trim()),
-      ),
-    );
+    _openHome(_emailController.text.trim());
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isGoogleLoading = true;
+      _loginError = null;
+    });
+    try {
+      final launched = await AuthService().signInWithGoogle();
+      if (!launched) throw StateError('No se pudo abrir Google.');
+      if (mounted) setState(() => _isGoogleLoading = false);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isGoogleLoading = false;
+        _loginError = 'No pudimos abrir el acceso con Google.';
+      });
+    }
   }
 
   @override
@@ -304,6 +346,50 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
+                    if (Backend.isConfigured) ...[
+                      const SizedBox(height: 18),
+                      const Row(
+                        children: [
+                          Expanded(child: Divider()),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              'o continúa con',
+                              style: TextStyle(color: Color(0xFF7A8398)),
+                            ),
+                          ),
+                          Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      OutlinedButton.icon(
+                        key: const Key('googleLoginButton'),
+                        onPressed: _isGoogleLoading || _isLoading
+                            ? null
+                            : _signInWithGoogle,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(52),
+                          side: const BorderSide(color: Color(0xFFD6DCE7)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        icon: const Text(
+                          'G',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF4285F4),
+                          ),
+                        ),
+                        label: Text(
+                          _isGoogleLoading
+                              ? 'Abriendo Google...'
+                              : 'Continuar con Google',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
                     if (_loginError != null) ...[
                       const SizedBox(height: 12),
                       Text(

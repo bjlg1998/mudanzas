@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/backend.dart';
@@ -26,6 +27,13 @@ class AuthService {
       data: {
         if (fullName != null && fullName.isNotEmpty) 'full_name': fullName,
       },
+    );
+  }
+
+  Future<bool> signInWithGoogle() {
+    return _client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: kIsWeb ? null : 'io.supabase.mudanzas://login-callback/',
     );
   }
 

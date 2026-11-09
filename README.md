@@ -57,6 +57,19 @@ flutter run --dart-define=SUPABASE_URL=https://TU-PROYECTO.supabase.co `
 
 Sin esos valores, la aplicación conserva el modo demo y no escribe datos.
 
+### Google OAuth local
+
+Crea `supabase/.env.local` (está excluido de Git) con:
+
+```env
+SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=TU_CLIENT_ID
+SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET=TU_CLIENT_SECRET
+```
+
+El cliente OAuth de Google debe permitir el callback local
+`http://127.0.0.1:54321/auth/v1/callback`. En Android, Supabase regresa a la
+app mediante `io.supabase.mudanzas://login-callback/`.
+
 ## Seguimiento sin saturar la cuota
 
 `LiveTrackingService` publica la ubicación por Realtime como máximo cada 10
