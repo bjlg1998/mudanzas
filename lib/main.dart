@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/backend.dart';
+import 'mis_mudanzas_page.dart';
 import 'nueva_mudanza_page.dart';
 import 'services/auth_service.dart';
 
@@ -55,7 +56,12 @@ class MudanzasApp extends StatelessWidget {
     if (Backend.isConfigured) {
       final user = AuthService().currentSession?.user;
       if (user != null) {
-        return InicioPage(email: user.email ?? 'Usuario');
+        final auth = AuthService();
+        return InicioPage(
+          email: user.email ?? 'Usuario',
+          displayName: auth.displayName,
+          avatarUrl: auth.avatarUrl,
+        );
       }
     }
     return const LoginPage();
@@ -109,8 +115,15 @@ class _LoginPageState extends State<LoginPage> {
   void _openHome(String email) {
     if (!mounted || _navigating) return;
     _navigating = true;
+    final auth = AuthService();
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => InicioPage(email: email)),
+      MaterialPageRoute<void>(
+        builder: (_) => InicioPage(
+          email: email,
+          displayName: auth.displayName,
+          avatarUrl: auth.avatarUrl,
+        ),
+      ),
     );
   }
 
@@ -479,9 +492,16 @@ class _AppLogo extends StatelessWidget {
 }
 
 class InicioPage extends StatelessWidget {
-  const InicioPage({super.key, required this.email});
+  const InicioPage({
+    super.key,
+    required this.email,
+    this.displayName,
+    this.avatarUrl,
+  });
 
   final String email;
+  final String? displayName;
+  final String? avatarUrl;
 
   Future<void> _logout(BuildContext context) async {
     if (Backend.isConfigured) await AuthService().signOut();
@@ -520,35 +540,48 @@ class InicioPage extends StatelessWidget {
                     color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.waving_hand,
-                        color: Colors.amber,
-                        size: 34,
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        '¡Hola!',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                          fontWeight: FontWeight.w800,
+                      _UserAvatar(url: avatarUrl),
+                      const SizedBox(width: 18),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '¡Hola!',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            if (displayName != null) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                displayName!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 4),
+                            Text(
+                              email,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFFDCE6FF),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        email,
-                        style: const TextStyle(
-                          color: Color(0xFFDCE6FF),
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      const Text(
-                        'Bienvenido al inicio de tu aplicación de mudanzas.',
-                        style: TextStyle(color: Colors.white, fontSize: 17),
                       ),
                     ],
                   ),
@@ -573,15 +606,49 @@ class InicioPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const _QuickActionCard(
+                _QuickActionCard(
+                  key: const Key('myMovesButton'),
                   icon: Icons.inventory_2_outlined,
                   title: 'Mis mudanzas',
                   subtitle: 'Consulta tus servicios programados',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const MisMudanzasPage(),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _UserAvatar extends StatelessWidget {
+  const _UserAvatar({this.url});
+
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = Container(
+      color: const Color(0x33FFFFFF),
+      alignment: Alignment.center,
+      child: const Icon(Icons.person, color: Colors.white, size: 34),
+    );
+    return ClipOval(
+      child: SizedBox(
+        width: 68,
+        height: 68,
+        child: url == null
+            ? fallback
+            : Image.network(
+                url!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => fallback,
+              ),
       ),
     );
   }

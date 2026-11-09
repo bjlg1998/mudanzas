@@ -22,6 +22,35 @@ class MoveDraft {
   final double destinationLongitude;
 }
 
+class MoveSummary {
+  const MoveSummary({
+    required this.id,
+    required this.status,
+    required this.vehicleType,
+    required this.originAddress,
+    required this.destinationAddress,
+    required this.createdAt,
+  });
+
+  factory MoveSummary.fromJson(Map<String, dynamic> json) {
+    return MoveSummary(
+      id: json['id'] as String,
+      status: json['status'] as String,
+      vehicleType: json['vehicle_type'] as String,
+      originAddress: json['origin_address'] as String,
+      destinationAddress: json['destination_address'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+    );
+  }
+
+  final String id;
+  final String status;
+  final String vehicleType;
+  final String originAddress;
+  final String destinationAddress;
+  final DateTime createdAt;
+}
+
 class MoveService {
   SupabaseClient get _client => Backend.client;
 
@@ -46,11 +75,15 @@ class MoveService {
         .single();
   }
 
-  Future<List<Map<String, dynamic>>> myMoves() async {
+  Future<List<MoveSummary>> myMoves() async {
     final rows = await _client
         .from('move_requests')
-        .select()
+        .select(
+          'id,status,vehicle_type,origin_address,destination_address,created_at',
+        )
         .order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(rows);
+    return List<Map<String, dynamic>>.from(
+      rows,
+    ).map(MoveSummary.fromJson).toList();
   }
 }

@@ -6,8 +6,28 @@ import '../core/backend.dart';
 class AuthService {
   SupabaseClient get _client => Backend.client;
 
+  User? get currentUser =>
+      Backend.isConfigured ? _client.auth.currentUser : null;
+
   Session? get currentSession =>
       Backend.isConfigured ? _client.auth.currentSession : null;
+
+  String? get displayName {
+    final metadata = currentUser?.userMetadata;
+    return _firstText(metadata?['full_name'], metadata?['name']);
+  }
+
+  String? get avatarUrl {
+    final metadata = currentUser?.userMetadata;
+    return _firstText(metadata?['avatar_url'], metadata?['picture']);
+  }
+
+  String? _firstText(Object? first, Object? second) {
+    for (final value in [first, second]) {
+      if (value is String && value.trim().isNotEmpty) return value.trim();
+    }
+    return null;
+  }
 
   Future<AuthResponse> signIn({
     required String email,

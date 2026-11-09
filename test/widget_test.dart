@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mudanzas/location_picker_page.dart';
 import 'package:mudanzas/main.dart';
+import 'package:mudanzas/mis_mudanzas_page.dart';
 
 void main() {
   testWidgets('muestra errores cuando el formulario está vacío', (
@@ -49,6 +50,23 @@ void main() {
     expect(find.byKey(const Key('nameField')), findsOneWidget);
     expect(find.byKey(const Key('confirmPasswordField')), findsOneWidget);
     expect(find.text('Crear cuenta'), findsOneWidget);
+  });
+
+  testWidgets('muestra el perfil y el estado vacío de mis mudanzas', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: InicioPage(email: 'ana@correo.com', displayName: 'Ana Gómez'),
+      ),
+    );
+
+    expect(find.text('Ana Gómez'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('myMovesButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MisMudanzasPage), findsOneWidget);
+    expect(find.text('Aún no tienes mudanzas'), findsOneWidget);
   });
 
   testWidgets('crea una solicitud de mudanza con direcciones y vehículo', (
