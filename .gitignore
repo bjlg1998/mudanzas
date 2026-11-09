@@ -43,6 +43,7 @@ migrate_working_dir/
 .env.*
 !.env.example
 /supabase/.temp/
+/supabase/.branches/
 /node_modules/
 
 # Symbolication related

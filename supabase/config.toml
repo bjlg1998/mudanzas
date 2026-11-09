@@ -24,3 +24,8 @@ enable_signup = true
 
 [realtime]
 enabled = true
+
+# Vector no puede leer el socket Linux de Docker Desktop en Windows. Esto solo
+# desactiva la recolección local de logs; Auth, DB, API y Realtime siguen activos.
+[analytics]
+enabled = false

@@ -29,6 +29,10 @@ estados y ubicaciones. Todas las tablas tienen Row Level Security. Los canales
 `move:<uuid>` son privados y solo admiten al cliente, conductor asignado o un
 administrador.
 
+La analítica local está desactivada porque Vector no puede acceder al socket de
+Docker Desktop en Windows. Esto no desactiva la base de datos, Auth, Realtime,
+Storage ni Studio.
+
 ## Conectar un proyecto de Supabase
 
 1. Crear un proyecto gratuito en Supabase.

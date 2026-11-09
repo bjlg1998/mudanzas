@@ -314,7 +314,11 @@ create policy "vehicles_admin_all" on public.vehicles for all
 to authenticated using (public.is_admin()) with check (public.is_admin());
 
 create policy "moves_read_participant" on public.move_requests for select
-to authenticated using (public.can_access_move(id));
+to authenticated using (
+  customer_id = (select auth.uid())
+  or driver_id = (select auth.uid())
+  or public.is_admin()
+);
 create policy "moves_customer_create" on public.move_requests for insert
 to authenticated with check (
   customer_id = (select auth.uid())
