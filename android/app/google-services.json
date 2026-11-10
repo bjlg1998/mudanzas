@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "937021881366",
+    "project_id": "mudanzas-app-bjlg1998",
+    "storage_bucket": "mudanzas-app-bjlg1998.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:937021881366:android:e227283dfeb2f11c5d0937",
+        "android_client_info": {
+          "package_name": "com.example.mudanzas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAtCaS1t5-xwraVqWBUDHFCdTMOpszpBy0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

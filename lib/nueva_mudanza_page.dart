@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'app_theme.dart';
 import 'core/backend.dart';
 import 'location_picker_page.dart';
 import 'services/move_service.dart';
+import 'services/route_service.dart';
 
 enum VehicleType {
   motocarro(
@@ -39,6 +41,7 @@ class _NuevaMudanzaPageState extends State<NuevaMudanzaPage> {
   final _formKey = GlobalKey<FormState>();
   final _originController = TextEditingController();
   final _destinationController = TextEditingController();
+  final _notesController = TextEditingController();
 
   PickedLocation? _origin;
   PickedLocation? _destination;
@@ -50,6 +53,7 @@ class _NuevaMudanzaPageState extends State<NuevaMudanzaPage> {
   void dispose() {
     _originController.dispose();
     _destinationController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -92,6 +96,12 @@ class _NuevaMudanzaPageState extends State<NuevaMudanzaPage> {
     if (Backend.isConfigured) {
       setState(() => _submitting = true);
       try {
+        final route = await RouteService().calculate(
+          originLatitude: _origin!.latitude,
+          originLongitude: _origin!.longitude,
+          destinationLatitude: _destination!.latitude,
+          destinationLongitude: _destination!.longitude,
+        );
         await MoveService().create(
           MoveDraft(
             vehicleType: switch (_vehicle!) {
@@ -105,13 +115,22 @@ class _NuevaMudanzaPageState extends State<NuevaMudanzaPage> {
             destinationAddress: _destinationController.text.trim(),
             destinationLatitude: _destination!.latitude,
             destinationLongitude: _destination!.longitude,
+            customerNotes: _notesController.text,
+            routeDistanceMeters: route.distanceMeters,
+            routeDurationSeconds: route.durationSeconds,
           ),
         );
-      } catch (_) {
+      } catch (error) {
         if (!mounted) return;
         setState(() => _submitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No pudimos crear la solicitud.')),
+          SnackBar(
+            content: Text(
+              error.toString().contains('2 servicios activos')
+                  ? 'Ya tienes 2 servicios activos. Finaliza o cancela uno.'
+                  : 'No pudimos crear la solicitud.',
+            ),
+          ),
         );
         return;
       }
@@ -120,7 +139,7 @@ class _NuevaMudanzaPageState extends State<NuevaMudanzaPage> {
     if (!mounted) return;
     setState(() => _submitting = false);
 
-    showDialog<void>(
+    await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.check_circle_outline, size: 48),
@@ -135,6 +154,13 @@ class _NuevaMudanzaPageState extends State<NuevaMudanzaPage> {
               _SummaryRow(label: 'Destino', value: _destinationController.text),
               const SizedBox(height: 12),
               _SummaryRow(label: 'Vehículo', value: _vehicle!.label),
+              if (_notesController.text.trim().isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _SummaryRow(
+                  label: 'Indicaciones',
+                  value: _notesController.text.trim(),
+                ),
+              ],
             ],
           ),
         ),
@@ -142,11 +168,12 @@ class _NuevaMudanzaPageState extends State<NuevaMudanzaPage> {
           FilledButton(
             key: const Key('closeMoveSummary'),
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Entendido'),
+            child: const Text('Ver mis mudanzas'),
           ),
         ],
       ),
     );
+    if (mounted) Navigator.of(context).pop(true);
   }
 
   @override
@@ -185,6 +212,25 @@ class _NuevaMudanzaPageState extends State<NuevaMudanzaPage> {
                     destinationFromMap: _destination != null,
                     onOriginMap: () => _pickLocation(isOrigin: true),
                     onDestinationMap: () => _pickLocation(isOrigin: false),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    key: const Key('moveNotesField'),
+                    controller: _notesController,
+                    minLines: 3,
+                    maxLines: 5,
+                    maxLength: 500,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(
+                      labelText: 'Indicaciones para la mudanza (opcional)',
+                      hintText:
+                          'Ejemplo: tercer piso sin ascensor, llamar al llegar…',
+                      alignLabelWithHint: true,
+                      prefixIcon: Padding(
+                        padding: EdgeInsets.only(bottom: 58),
+                        child: Icon(Icons.sticky_note_2_outlined),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 26),
                   Row(
@@ -275,7 +321,7 @@ class _RouteCard extends StatelessWidget {
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFFE2E7F0)),
+        side: const BorderSide(color: AppColors.border),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
@@ -414,7 +460,7 @@ class _VehicleCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(
-          color: selected ? colors.primary : const Color(0xFFE2E7F0),
+          color: selected ? colors.primary : AppColors.border,
           width: selected ? 2 : 1,
         ),
       ),
