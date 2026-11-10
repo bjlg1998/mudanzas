@@ -7,6 +7,17 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val cloudKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+val cloudKeystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+val cloudKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+val cloudKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+val hasCloudSigning = listOf(
+    cloudKeystorePath,
+    cloudKeystorePassword,
+    cloudKeyAlias,
+    cloudKeyPassword,
+).all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.example.mudanzas"
     compileSdk = flutter.compileSdkVersion
@@ -28,11 +39,24 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasCloudSigning) {
+            create("cloudRelease") {
+                storeFile = file(cloudKeystorePath!!)
+                storePassword = cloudKeystorePassword
+                keyAlias = cloudKeyAlias
+                keyPassword = cloudKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // GitHub Actions usa una llave estable guardada como secreto. En
+            // desarrollo local conservamos la firma de prueba existente.
+            signingConfig = signingConfigs.getByName(
+                if (hasCloudSigning) "cloudRelease" else "debug",
+            )
         }
     }
 }

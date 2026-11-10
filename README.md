@@ -83,3 +83,14 @@ mantiene el mapa fluido sin hacer una escritura por cada lectura del GPS.
 flutter analyze
 flutter test
 ```
+
+## APK desde la nube
+
+El flujo `.github/workflows/android.yml` ejecuta análisis, pruebas y genera una
+APK ARM64 en GitHub Actions cada vez que cambia `main`. La APK queda disponible
+durante 30 días como artefacto de la ejecución.
+
+Al subir una etiqueta que coincida con la versión de `pubspec.yaml`, por ejemplo
+`v1.0.11`, el mismo flujo crea un GitHub Release y adjunta la APK. La URL y clave
+pública de Supabase están configuradas como variables de Actions; la llave de
+firma Android y sus contraseñas están guardadas como secretos del repositorio.

@@ -37,6 +37,9 @@ migrate_working_dir/
 /dist/
 *.apk
 *.aab
+*.jks
+*.keystore
+key.properties
 
 # Local backend credentials
 .env
